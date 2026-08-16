@@ -63,7 +63,7 @@ def setup_platform(
     station_id = config[CONF_STATION_ID]
     fuel_types = config[CONF_FUEL_TYPES]
 
-    coordinator: NSWFuelStationCoordinator = hass.data[DATA_NSW_FUEL_STATION]
+    coordinator: NSWFuelStationCoordinator = hass.data[DATA_NSW_FUEL_STATION]["yaml"]
 
     entities = []
     for fuel_type in fuel_types:

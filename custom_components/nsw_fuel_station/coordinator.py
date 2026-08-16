@@ -7,6 +7,7 @@ from typing import Any, override
 
 import requests
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -30,14 +31,19 @@ class StationPriceData:
 class NSWFuelStationCoordinator(DataUpdateCoordinator[StationPriceData]):
     """Class to manage fetching NSW fuel station data."""
 
-    config_entry: None
+    def __init__(
+        self, hass: HomeAssistant, config_entry: ConfigEntry | None = None
+    ) -> None:
+        """Initialize the coordinator.
 
-    def __init__(self, hass: HomeAssistant) -> None:
-        """Initialize the coordinator."""
+        ``config_entry`` is required for the config-entry path (so
+        ``async_config_entry_first_refresh`` works); the legacy YAML path
+        passes None, matching the built-in integration.
+        """
         super().__init__(
             hass,
             _LOGGER,
-            config_entry=None,
+            config_entry=config_entry,
             name="sensor",
             update_interval=SCAN_INTERVAL,
         )

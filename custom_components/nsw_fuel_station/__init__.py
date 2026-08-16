@@ -92,7 +92,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up NSW Fuel Station from a config entry."""
-    coordinator = NSWFuelStationCoordinator(hass)
+    coordinator = NSWFuelStationCoordinator(hass, entry)
     hass.data.setdefault(DATA_NSW_FUEL_STATION, {})[entry.entry_id] = coordinator
 
     await coordinator.async_config_entry_first_refresh()
