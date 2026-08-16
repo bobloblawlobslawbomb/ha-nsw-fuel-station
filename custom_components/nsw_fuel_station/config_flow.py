@@ -17,11 +17,13 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import UpdateFailed
 from homeassistant.helpers import selector
 
-from nsw_fuel import FuelCheckClient, FuelCheckError, Station
+from nsw_fuel import FuelCheckClient, Station
 
 from .const import CONF_FUEL_TYPES, CONF_STATIONS, DOMAIN
+from .coordinator import _fetch_station_price_data
 from .station_data import (
     DEFAULT_FUEL_TYPES,
     FUEL_TYPE_LABELS,
@@ -68,8 +70,13 @@ def _parse_location(location: dict[str, Any]) -> tuple[float, float, float]:
 
 
 async def _fetch_data(hass: HomeAssistant, client: FuelCheckClient) -> Any:
-    """Fetch all fuel prices in an executor (the client is synchronous)."""
-    return await hass.async_add_executor_job(client.get_fuel_prices)
+    """Fetch and restructure all fuel prices in an executor.
+
+    Uses the coordinator's restructuring helper so the flow works with the
+    same dict-keyed ``StationPriceData`` shape as the sensors (the raw
+    client returns plain lists). Raises UpdateFailed on API errors.
+    """
+    return await hass.async_add_executor_job(_fetch_station_price_data, client)
 
 
 class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -124,7 +131,7 @@ class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
         client = FuelCheckClient()
         try:
             data = await _fetch_data(self.hass, client)
-        except FuelCheckError as exc:
+        except UpdateFailed as exc:
             _LOGGER.warning("Failed to fetch NSW fuel station data: %s", exc)
             return self.async_show_form(
                 step_id="user",
@@ -282,7 +289,7 @@ class NSWFuelStationOptionsFlow(OptionsFlow):
         client = FuelCheckClient()
         try:
             data = await _fetch_data(self.hass, client)
-        except FuelCheckError as exc:
+        except UpdateFailed as exc:
             _LOGGER.warning("Failed to fetch NSW fuel station data: %s", exc)
             return self.async_show_form(
                 step_id="init",
