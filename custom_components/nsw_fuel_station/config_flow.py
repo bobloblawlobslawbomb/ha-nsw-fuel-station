@@ -35,6 +35,38 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_RADIUS_KM = 10
 
 
+def _location_field(latitude: float, longitude: float, radius_km: float) -> dict:
+    """Return the map location field (a one-entry schema dict) with a default.
+
+    The HA frontend's ``computeInitialHaFormData()`` throws
+    ``Selector location not supported in initial form data`` for a required
+    ``location`` selector without a default, which renders the flow dialog
+    blank/black. Giving the field a default short-circuits that check, so the
+    Leaflet map renders centred on the given coordinates. The location
+    selector reports its radius in metres.
+    """
+    return {
+        vol.Optional(
+            "location",
+            default={
+                CONF_LATITUDE: latitude,
+                CONF_LONGITUDE: longitude,
+                CONF_RADIUS: round(radius_km * 1000),
+            },
+        ): selector.LocationSelector(selector.LocationSelectorConfig(radius=True))
+    }
+
+
+def _parse_location(location: dict[str, Any]) -> tuple[float, float, float]:
+    """Extract (latitude, longitude, radius_km) from the selector value."""
+    latitude = float(location[CONF_LATITUDE])
+    longitude = float(location[CONF_LONGITUDE])
+    radius_km = (
+        float(location.get(CONF_RADIUS, DEFAULT_RADIUS_KM * 1000)) / 1000.0
+    )
+    return latitude, longitude, radius_km
+
+
 async def _fetch_data(hass: HomeAssistant, client: FuelCheckClient) -> Any:
     """Fetch all fuel prices in an executor (the client is synchronous)."""
     return await hass.async_add_executor_job(client.get_fuel_prices)
@@ -60,18 +92,17 @@ class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            location = user_input["location"]
-            self._lat = float(location[CONF_LATITUDE])
-            self._lon = float(location[CONF_LONGITUDE])
-            self._radius = float(location.get(CONF_RADIUS, DEFAULT_RADIUS_KM))
+            self._lat, self._lon, self._radius = _parse_location(
+                user_input["location"]
+            )
             return await self.async_step_stations()
 
         data_schema = vol.Schema(
-            {
-                vol.Required("location"): selector.LocationSelector(
-                    selector.LocationSelectorConfig(radius=True)
-                ),
-            }
+            _location_field(
+                self.hass.config.latitude,
+                self.hass.config.longitude,
+                DEFAULT_RADIUS_KM,
+            )
         )
         return self.async_show_form(
             step_id="user",
@@ -98,11 +129,11 @@ class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema(
-                    {
-                        vol.Required("location"): selector.LocationSelector(
-                            selector.LocationSelectorConfig(radius=True)
-                        ),
-                    }
+                    _location_field(
+                        self.hass.config.latitude,
+                        self.hass.config.longitude,
+                        DEFAULT_RADIUS_KM,
+                    )
                 ),
                 errors={"base": "api_error"},
             )
@@ -114,11 +145,11 @@ class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema(
-                    {
-                        vol.Required("location"): selector.LocationSelector(
-                            selector.LocationSelectorConfig(radius=True)
-                        ),
-                    }
+                    _location_field(
+                        self.hass.config.latitude,
+                        self.hass.config.longitude,
+                        DEFAULT_RADIUS_KM,
+                    )
                 ),
                 errors={"base": "no_stations"},
             )
@@ -228,25 +259,13 @@ class NSWFuelStationOptionsFlow(OptionsFlow):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            location = user_input["location"]
-            self._lat = float(location[CONF_LATITUDE])
-            self._lon = float(location[CONF_LONGITUDE])
-            self._radius = float(location.get(CONF_RADIUS, DEFAULT_RADIUS_KM))
+            self._lat, self._lon, self._radius = _parse_location(
+                user_input["location"]
+            )
             return await self.async_step_stations()
 
         data_schema = vol.Schema(
-            {
-                vol.Required(
-                    "location",
-                    default={
-                        CONF_LATITUDE: self._lat,
-                        CONF_LONGITUDE: self._lon,
-                        CONF_RADIUS: self._radius,
-                    },
-                ): selector.LocationSelector(
-                    selector.LocationSelectorConfig(radius=True)
-                ),
-            }
+            _location_field(self._lat, self._lon, self._radius)
         )
         return self.async_show_form(step_id="init", data_schema=data_schema, errors=errors)
 
@@ -268,11 +287,7 @@ class NSWFuelStationOptionsFlow(OptionsFlow):
             return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema(
-                    {
-                        vol.Required("location"): selector.LocationSelector(
-                            selector.LocationSelectorConfig(radius=True)
-                        ),
-                    }
+                    _location_field(self._lat, self._lon, self._radius)
                 ),
                 errors={"base": "api_error"},
             )
@@ -284,11 +299,7 @@ class NSWFuelStationOptionsFlow(OptionsFlow):
             return self.async_show_form(
                 step_id="init",
                 data_schema=vol.Schema(
-                    {
-                        vol.Required("location"): selector.LocationSelector(
-                            selector.LocationSelectorConfig(radius=True)
-                        ),
-                    }
+                    _location_field(self._lat, self._lon, self._radius)
                 ),
                 errors={"base": "no_stations"},
             )
