@@ -17,8 +17,8 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import UpdateFailed
 from homeassistant.helpers import selector
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from nsw_fuel import FuelCheckClient, Station
 

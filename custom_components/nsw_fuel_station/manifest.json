@@ -8,5 +8,5 @@
   "loggers": ["nsw_fuel"],
   "requirements": ["nsw-fuel-api-client==1.1.0"],
   "config_flow": true,
-  "version": "0.1.2"
+  "version": "0.1.3"
 }
