@@ -20,13 +20,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import selector
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from nsw_fuel import FuelCheckClient, Station
-
 from .const import CONF_FUEL_TYPES, CONF_STATIONS, DOMAIN
 from .coordinator import _fetch_station_price_data
 from .station_data import (
     DEFAULT_FUEL_TYPES,
     FUEL_TYPE_LABELS,
+    Station,
     fuel_types_for_stations,
     station_label,
     stations_within_radius,
@@ -69,14 +68,14 @@ def _parse_location(location: dict[str, Any]) -> tuple[float, float, float]:
     return latitude, longitude, radius_km
 
 
-async def _fetch_data(hass: HomeAssistant, client: FuelCheckClient) -> Any:
+async def _fetch_data(hass: HomeAssistant) -> Any:
     """Fetch and restructure all fuel prices in an executor.
 
-    Uses the coordinator's restructuring helper so the flow works with the
-    same dict-keyed ``StationPriceData`` shape as the sensors (the raw
-    client returns plain lists). Raises UpdateFailed on API errors.
+    Uses the coordinator's fetch helper (plain requests against the
+    FuelCheck API, parsed into dict-keyed ``StationPriceData`` with
+    coordinates). Raises UpdateFailed on API errors.
     """
-    return await hass.async_add_executor_job(_fetch_station_price_data, client)
+    return await hass.async_add_executor_job(_fetch_station_price_data)
 
 
 class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -128,9 +127,8 @@ class NSWFuelStationConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_fuel_types()
 
         # Fetch station + price data and filter by the picked radius.
-        client = FuelCheckClient()
         try:
-            data = await _fetch_data(self.hass, client)
+            data = await _fetch_data(self.hass)
         except UpdateFailed as exc:
             _LOGGER.warning("Failed to fetch NSW fuel station data: %s", exc)
             return self.async_show_form(
@@ -286,9 +284,9 @@ class NSWFuelStationOptionsFlow(OptionsFlow):
             self._selected_stations: list[str] = user_input[CONF_STATIONS]
             return await self.async_step_fuel_types()
 
-        client = FuelCheckClient()
+        # Fetch station + price data and filter by the stored area.
         try:
-            data = await _fetch_data(self.hass, client)
+            data = await _fetch_data(self.hass)
         except UpdateFailed as exc:
             _LOGGER.warning("Failed to fetch NSW fuel station data: %s", exc)
             return self.async_show_form(

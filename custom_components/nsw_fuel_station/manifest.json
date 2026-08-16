@@ -6,7 +6,6 @@
   "issue_tracker": "https://github.com/bobloblawlobslawbomb/ha-nsw-fuel-station/issues",
   "iot_class": "cloud_polling",
   "loggers": ["nsw_fuel"],
-  "requirements": ["nsw-fuel-api-client==1.1.0"],
   "config_flow": true,
-  "version": "0.1.4"
+  "version": "0.1.5"
 }

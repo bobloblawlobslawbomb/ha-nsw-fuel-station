@@ -6,11 +6,26 @@ unit-testable outside HA.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import asin, cos, radians, sin, sqrt
 
-from nsw_fuel import Station
-
 EARTH_RADIUS_KM = 6371.0
+
+
+@dataclass
+class Station:
+    """Lightweight station record parsed straight from the FuelCheck API.
+
+    (The nsw-fuel-api-client's own Station DTO has no coordinates until
+    unreleased master, so the integration parses its own.)
+    """
+
+    code: int
+    name: str
+    brand: str | None = None
+    address: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 FUEL_TYPE_LABELS = {
     "E10": "E10 (95 RON, 10% ethanol)",
@@ -56,6 +71,8 @@ def stations_within_radius(
     """Return (station, distance_km) pairs within radius, sorted by distance."""
     nearby = []
     for station in stations.values():
+        if station.latitude is None or station.longitude is None:
+            continue  # station without coordinates can't be located
         distance = haversine_km(lat, lon, station.latitude, station.longitude)
         if distance <= radius_km:
             nearby.append((station, distance))

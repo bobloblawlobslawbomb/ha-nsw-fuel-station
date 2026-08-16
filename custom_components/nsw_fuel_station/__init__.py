@@ -13,8 +13,6 @@ import logging
 
 import voluptuous as vol
 
-from nsw_fuel import FuelCheckClient
-
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -52,8 +50,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """
     hass.data.setdefault(DATA_NSW_FUEL_STATION, {})
 
-    client = FuelCheckClient()
-    coordinator = NSWFuelStationCoordinator(hass, client)
+    coordinator = NSWFuelStationCoordinator(hass)
     hass.data[DATA_NSW_FUEL_STATION]["yaml"] = coordinator
 
     await coordinator.async_refresh()
@@ -95,8 +92,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up NSW Fuel Station from a config entry."""
-    client = FuelCheckClient()
-    coordinator = NSWFuelStationCoordinator(hass, client)
+    coordinator = NSWFuelStationCoordinator(hass)
     hass.data.setdefault(DATA_NSW_FUEL_STATION, {})[entry.entry_id] = coordinator
 
     await coordinator.async_config_entry_first_refresh()

@@ -3,16 +3,20 @@
 from dataclasses import dataclass
 import datetime
 import logging
-from typing import override
+from typing import Any, override
 
-from nsw_fuel import FuelCheckClient, FuelCheckError, Station
+import requests
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .station_data import Station
+
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = datetime.timedelta(hours=1)
+
+API_URL = "https://api.onegov.nsw.gov.au/FuelCheckApp/v1/fuel/prices"
 
 
 @dataclass
@@ -28,7 +32,7 @@ class NSWFuelStationCoordinator(DataUpdateCoordinator[StationPriceData]):
 
     config_entry: None
 
-    def __init__(self, hass: HomeAssistant, client: FuelCheckClient) -> None:
+    def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
@@ -37,30 +41,57 @@ class NSWFuelStationCoordinator(DataUpdateCoordinator[StationPriceData]):
             name="sensor",
             update_interval=SCAN_INTERVAL,
         )
-        self.client = client
 
     @override
     async def _async_update_data(self) -> StationPriceData:
         """Fetch data from API."""
-        return await self.hass.async_add_executor_job(
-            _fetch_station_price_data, self.client
-        )
+        return await self.hass.async_add_executor_job(_fetch_station_price_data)
 
 
-def _fetch_station_price_data(client: FuelCheckClient) -> StationPriceData:
-    """Fetch fuel price and station data."""
+def _fetch_station_price_data(client: Any | None = None) -> StationPriceData:
+    """Fetch the FuelCheck price dump and restructure it.
+
+    The dump is fetched directly (plain requests + a ``requesttimestamp``
+    header — the same call the nsw-fuel-api-client makes) because that
+    client's released ``Station`` DTO has no coordinates; the raw API
+    provides ``location`` per station.
+    """
+    timestamp = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     try:
-        raw_price_data = client.get_fuel_prices()
-        # Restructure prices and station details to be indexed by station code
-        # for O(1) lookup
-        return StationPriceData(
-            stations={s.code: s for s in raw_price_data.stations},
-            prices={
-                (p.station_code, p.fuel_type): p.price for p in raw_price_data.prices
-            },
+        response = requests.get(
+            API_URL, headers={"requesttimestamp": timestamp}, timeout=30
         )
-    except FuelCheckError as exc:
+        response.raise_for_status()
+        raw = response.json()
+    except Exception as exc:  # noqa: BLE001 - surface any fetch failure
         raise UpdateFailed(
             f"Failed to fetch NSW Fuel station price data: {exc}"
         ) from exc
 
+    stations: dict[int, Station] = {}
+    for entry in raw.get("stations", []):
+        try:
+            code = int(entry["code"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        location = entry.get("location") or {}
+        stations[code] = Station(
+            code=code,
+            name=entry.get("name", ""),
+            brand=entry.get("brand"),
+            address=entry.get("address"),
+            latitude=location.get("latitude"),
+            longitude=location.get("longitude"),
+        )
+
+    prices: dict[tuple[int, str], float] = {}
+    for entry in raw.get("prices", []):
+        try:
+            code = int(entry["stationcode"])
+            fuel_type = entry["fueltype"]
+            price = float(entry["price"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        prices[(code, fuel_type)] = price
+
+    return StationPriceData(stations=stations, prices=prices)
