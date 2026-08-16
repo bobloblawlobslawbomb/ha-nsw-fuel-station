@@ -1,0 +1,6 @@
+{
+  "name": "NSW Fuel Station Price (enhanced)",
+  "render_readme": true,
+  "homeassistant": "2024.2.0",
+  "country": ["AU"]
+}
