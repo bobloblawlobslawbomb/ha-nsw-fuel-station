@@ -140,12 +140,18 @@ class StationPriceSensor(CoordinatorEntity[NSWFuelStationCoordinator], SensorEnt
 
     @property
     @override
-    def extra_state_attributes(self) -> dict[str, int | str]:
+    def extra_state_attributes(self) -> dict[str, int | str | float]:
         """Return the state attributes of the device."""
-        return {
+        attrs: dict[str, int | str | float] = {
             ATTR_STATION_ID: self._station_id,
             ATTR_STATION_NAME: self._get_station_name(),
         }
+        if (station := self.coordinator.data.stations.get(self._station_id)) is not None:
+            attrs["latitude"] = station.latitude
+            attrs["longitude"] = station.longitude
+            if station.address:
+                attrs["address"] = station.address
+        return attrs
 
     @property
     @override
