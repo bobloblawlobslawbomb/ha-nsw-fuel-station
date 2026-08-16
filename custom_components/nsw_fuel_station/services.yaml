@@ -1,0 +1,24 @@
+set_tracked_stations:
+  name: Set tracked stations
+  description: >-
+    Replace the set of tracked fuel stations (and optionally the fuel types)
+    for this integration's config entry.
+  fields:
+    station_ids:
+      name: Station IDs
+      description: >-
+        FuelCheck station codes to track, e.g. [1510, 2262]. Station codes are
+        shown in each sensor's station_id attribute.
+      required: true
+      example: "[1510, 2262]"
+      selector:
+        object:
+    fuel_types:
+      name: Fuel types
+      description: >-
+        Fuel types to report for each station, e.g. [P95, P98, Diesel].
+        Omit to keep the currently configured fuel types.
+      required: false
+      example: "[P95, P98]"
+      selector:
+        object:

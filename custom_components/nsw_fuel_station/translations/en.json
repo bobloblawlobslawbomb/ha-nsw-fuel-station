@@ -1,0 +1,63 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pick your area",
+        "description": "Use the map to pick the centre of your search area and set a radius. All fuel stations inside the radius will be listed on the next step.",
+        "data": {
+          "location": "Search area"
+        }
+      },
+      "stations": {
+        "title": "Choose stations",
+        "description": "Select the fuel stations you want to track. Sensors will be created for each selected station and fuel type.",
+        "data": {
+          "stations": "Stations"
+        }
+      },
+      "fuel_types": {
+        "title": "Choose fuel types",
+        "description": "Select which fuel types to track at the chosen stations.",
+        "data": {
+          "fuel_types": "Fuel types"
+        }
+      }
+    },
+    "error": {
+      "no_stations": "No fuel stations were found within the chosen radius. Try a larger radius or move the map marker.",
+      "api_error": "Could not fetch station data from the NSW FuelCheck service. Please try again."
+    },
+    "abort": {
+      "already_configured": "The NSW Fuel Station integration is already configured. Use its options to change the tracked stations."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Search area",
+        "description": "Adjust the centre and radius of your search area.",
+        "data": {
+          "location": "Search area"
+        }
+      },
+      "stations": {
+        "title": "Tracked stations",
+        "description": "Select which stations to track.",
+        "data": {
+          "stations": "Stations"
+        }
+      },
+      "fuel_types": {
+        "title": "Tracked fuel types",
+        "description": "Select which fuel types to track at the chosen stations.",
+        "data": {
+          "fuel_types": "Fuel types"
+        }
+      }
+    },
+    "error": {
+      "no_stations": "No fuel stations were found within the chosen radius. Try a larger radius or move the map marker.",
+      "api_error": "Could not fetch station data from the NSW FuelCheck service. Please try again."
+    }
+  }
+}
